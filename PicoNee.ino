@@ -1,22 +1,11 @@
-// PsNee / psxdev.net version
-// For Arduino and ATtiny
+// PsNee / PicoNee version
+// For RP2040
 //
 // Quick start: Select your hardware via the #defines, compile + upload the code, install in PSX.
 // There are some pictures in the development thread ( http://www.psxdev.net/forum/viewtopic.php?f=47&t=1262&start=120 )
 // Beware to use the PSX 3.5V / 3.3V power, *NOT* 5V! The installation pictures include an example.
 //
-// Arduinos:
-//  - Arduino Pro Mini @8Mhz and @16Mhz (supported, tested)
-//  - Arduino Uno @8Mhz and @16Mhz (supported, tested)
-//  - Arduino Pro Micro has a different pin assignment and needs some easy porting. (ToDo)
-//  - Use #define ARDUINO_BOARD
-// ATtiny:
-//  - ATtiny85: Should work the same as ATtiny45 (supported, untested)
-//  - ATtiny45: LFUSE 0xE2  HFUSE 0xDF > internal oscillator, full 8Mhz speed (supported, tested)
-//  - ATtiny25: Should work the same as ATtiny45 but doesn't have enough Flash nor RAM for PSNEEDEBUG (supported, untested)
-//  - Use #define ATTINY_X5
-//
-// To use ATtiny with the Arduino environment, an ATtiny core has to be installed.
+// To use RP2040 with the Arduino environment, an RP2040 core has to be installed.
 //
 // PAL PM-41 consoles are supported with #define APPLY_PSONE_PAL_BIOS_PATCH,
 // but only on boards with ATmega chips (Arduinos).
@@ -25,16 +14,8 @@
 // This code defaults to multi-region, meaning it will unlock PAL, NTSC-U and NTSC-J machines.
 // You can optimize boot times for your console further. See "// inject symbols now" in the main loop.
 
-//+-------------------------------------------------------------------------------------------+
-//|                                  Choose your hardware!                                    |
-//+-------------------------------------------------------------------------------------------+
-// 2 main branches available:
-//  - ATmega based > easy to use, fast and nice features for development, recommended
-//  - ATtiny based > for minimal installs
 
-//#define ARDUINO_BOARD
-//#define ATTINY_X5
-#define RP2040
+
 
 //#define APPLY_PSONE_PAL_BIOS_PATCH
 
@@ -42,78 +23,30 @@
 
 #include <avr/pgmspace.h>
 
-#if defined(ARDUINO_BOARD)
-  // board pins (code requires porting to reflect any changes)
-  #if defined(APPLY_PSONE_PAL_BIOS_PATCH)
-    #define BIOS_A18 4          // connect to PSOne BIOS A18 (pin 31 on that chip)
-    #define BIOS_D2  5          // connect to PSOne BIOS D2 (pin 15 on that chip)
-  #endif
-  #define sqck 6          // connect to PSX HC-05 SQCK pin
-  #define subq 7          // connect to PSX HC-05 SUBQ pin
-  #define data 8          // connect to point 6 in old modchip diagrams
-  #define gate_wfck 9     // connect to point 5 in old modchip diagrams
-  // MCU I/O definitions
-  #define SUBQPORT PIND       // MCU port for the 2 SUBQ sampling inputs
-  #define SQCKBIT 6           // PD6 "SQCK" < Mechacon pin 26 (PU-7 and early PU-8 Mechacons: pin 41)
-  #define SUBQBIT 7           // PD7 "SUBQ" < Mechacon pin 24 (PU-7 and early PU-8 Mechacons: pin 39)
-  #define GATEWFCKPORT PINB   // MCU port for the gate input (used for WFCK)
-  #define DATAPORT PORTB      // MCU port for the gate input (used for WFCK)
-  #define GATEWFCKBIT 1       // PB1
-  #define DATABIT 0           // PB0
-  #if defined(APPLY_PSONE_PAL_BIOS_PATCH)
-    #define BIOSPATCHPORTIN  PIND
-    #define BIOSPATCHPORTOUT PORTD
-    #define BIOSPATCHDDR     DDRD
-    #define BIOS_A18_BIT 4
-    #define BIOS_D2_BIT  5
-  #endif
-#elif defined(ATTINY_X5) // ATtiny 25/45/85
-  // extras
-  #define USINGSOFTWARESERIAL
-  // board pins (Do not change. Changing pins requires adjustments to MCU I/O definitions)
-  #define sqck 0
-  #define subq 1
-  #define data 2
-  #define gate_wfck 4
-  #define debugtx 3
-  // MCU I/O definitions
-  #define SUBQPORT PINB
-  #define SQCKBIT 0
-  #define SUBQBIT 1
-  #define GATEWFCKPORT PINB
-  #define DATAPORT PORTB
-  #define GATEWFCKBIT 4
-  #define DATABIT 2
-  #if defined(APPLY_PSONE_PAL_BIOS_PATCH)
-    #error "ATtiny does not support PAL PSOne patch yet!"
-  #endif
-#elif defined(RP2040) // ATtiny 25/45/85
-  #if defined(APPLY_PSONE_PAL_BIOS_PATCH)
-    #define BIOS_A18 4          // connect to PSOne BIOS A18 (pin 31 on that chip)
-    #define BIOS_D2  5          // connect to PSOne BIOS D2 (pin 15 on that chip)
-  #endif
-  #define sqck 6          // connect to PSX HC-05 SQCK pin
-  #define subq 7          // connect to PSX HC-05 SUBQ pin
-  #define data 8          // connect to point 6 in old modchip diagrams
-  #define gate_wfck 9     // connect to point 5 in old modchip diagrams
-  // MCU I/O definitions
-  #define SUBQPORT PIND       // 1MCU port for the 2 SUBQ sampling inputs
-  #define SQCKBIT 6           // PD6 "SQCK" < Mechacon pin 26 (PU-7 and early PU-8 Mechacons: pin 41)
-  #define SUBQBIT 7           // PD7 "SUBQ" < Mechacon pin 24 (PU-7 and early PU-8 Mechacons: pin 39)
-  #define GATEWFCKPORT PINB   // MCU port for the gate input (used for WFCK)
-  #define DATAPORT PORTB      // MCU port for the gate input (used for WFCK)
-  #define GATEWFCKBIT 1       // PB1
-  #define DATABIT 0           // PB0
-  #if defined(APPLY_PSONE_PAL_BIOS_PATCH)
-    #define BIOSPATCHPORTIN  PIND
-    #define BIOSPATCHPORTOUT PORTD
-    #define BIOSPATCHDDR     DDRD
-    #define BIOS_A18_BIT 4
-    #define BIOS_D2_BIT  5
-  #endif
-#else
-  #error "Select a board!"
+#if defined(APPLY_PSONE_PAL_BIOS_PATCH)
+  #define BIOS_A18 4          // connect to PSOne BIOS A18 (pin 31 on that chip)
+  #define BIOS_D2  5          // connect to PSOne BIOS D2 (pin 15 on that chip)
 #endif
+#define sqck 6          // connect to PSX HC-05 SQCK pin
+#define subq 7          // connect to PSX HC-05 SUBQ pin
+#define data 8          // connect to point 6 in old modchip diagrams
+#define gate_wfck 9     // connect to point 5 in old modchip diagrams
+// MCU I/O definitions
+#define SUBQPORT PIND       // 1MCU port for the 2 SUBQ sampling inputs
+#define SQCKBIT 6           // PD6 "SQCK" < Mechacon pin 26 (PU-7 and early PU-8 Mechacons: pin 41)
+#define SUBQBIT 7           // PD7 "SUBQ" < Mechacon pin 24 (PU-7 and early PU-8 Mechacons: pin 39)
+#define GATEWFCKPORT PINB   // MCU port for the gate input (used for WFCK)
+#define DATAPORT PORTB      // MCU port for the gate input (used for WFCK)
+#define GATEWFCKBIT 1       // PB1
+#define DATABIT 0           // PB0
+#if defined(APPLY_PSONE_PAL_BIOS_PATCH)
+  #define BIOSPATCHPORTIN  PIND
+  #define BIOSPATCHPORTOUT PORTD
+  #define BIOSPATCHDDR     DDRD
+  #define BIOS_A18_BIT 4
+  #define BIOS_D2_BIT  5
+#endif
+
 
 #if defined(PSNEEDEBUG) && defined(USINGSOFTWARESERIAL)
   #include <SoftwareSerial.h>
@@ -247,13 +180,10 @@ void setup()
   DEBUG_PRINTLN("Waiting for SQCK..");
 #endif
 
-#if defined(ARDUINO_BOARD)
-  pinMode(LED_BUILTIN, OUTPUT); // Blink on injection / debug.
-  digitalWrite(LED_BUILTIN, HIGH); // mark begin of setup
-#elif defined(RP2040)
+
   pinMode(25, OUTPUT); // Blink on injection / debug.
   digitalWrite(25, HIGH); // mark begin of setup
-#endif
+
 
   // wait for console power on and stable signals
   while (!digitalRead(sqck));
@@ -286,25 +216,9 @@ void setup()
     pu22mode = 0;
   }
 
-#ifdef ATTINY_X5
-  DEBUG_PRINT("m "); DEBUG_PRINTLN(pu22mode);
-#else
-  DEBUG_PRINT("highs: "); DEBUG_PRINT(highs); DEBUG_PRINT(" lows: "); DEBUG_PRINTLN(lows);
-  DEBUG_PRINT("pu22mode: "); DEBUG_PRINTLN(pu22mode);
-  // Power saving
-  // Disable the ADC by setting the ADEN bit (bit 7)  of the ADCSRA register to zero.
-  ADCSRA = ADCSRA & B01111111;
-  // Disable the analog comparator by setting the ACD bit (bit 7) of the ACSR register to one.
-  ACSR = B10000000;
-  // Disable digital input buffers on all analog input pins by setting bits 0-5 of the DIDR0 register to one.
-  DIDR0 = DIDR0 | B00111111;
-#endif
 
-#if defined(ARDUINO_BOARD)
-  digitalWrite(LED_BUILTIN, LOW); // setup complete
-#elif defined(RP2040)
   digitalWrite(25, LOW); // setup complete
-#endif
+
 
   DEBUG_FLUSH; // empty serial transmit buffer
 }
@@ -410,16 +324,7 @@ start:
     // Hysteresis naturally goes to 0 otherwise (the read head moved).
     hysteresis = 11;
 
-#ifdef ATTINY_X5
-    DEBUG_PRINTLN("!");
-#else
-    DEBUG_PRINTLN("INJECT!INJECT!INJECT!INJECT!INJECT!INJECT!");
-#endif
-#if defined(ARDUINO_BOARD)
-    digitalWrite(LED_BUILTIN, HIGH);
-#elif defined(RP2040)
     digitalWrite(25, HIGH);
-#endif
 
     pinMode(data, OUTPUT);
     digitalWrite(data, 0); // pull data low
@@ -442,11 +347,8 @@ start:
       pinMode(gate_wfck, INPUT); // high-z the line, we're done
     }
     pinMode(data, INPUT); // high-z the line, we're done
-#if defined(ARDUINO_BOARD)
-    digitalWrite(LED_BUILTIN, LOW);
-#elif defined(RP2040)
+
     digitalWrite(25, LOW);
-#endif
   }
   // keep catching SUBQ packets forever
 }
